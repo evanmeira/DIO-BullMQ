@@ -1,9 +1,10 @@
 import Mail from "../lib/Mail";
 
 export default {
-  key: "RegistrationMail",
+  name: "Mail_Job",
+  queueName: "RegistrationMail",  
   options: {
-    delay: 5000,
+    //delay: 5000, need a QueueScheduler
     priority: 3
   },
   async handle({ data }) {

@@ -1,10 +1,11 @@
-import Queue from "bull";
+import { Queue, Worker, QueueScheduler } from "bullmq";
 import redisConfig from "../../config/redis";
 import * as jobs from "../jobs";
 
 const queues = Object.values(jobs).map( job => ({
-  bull: new Queue(job.key, redisConfig),
-  name: job.key,
+  bull: new Queue(job.queueName, redisConfig),
+  name: job.queueName,
+  jobName: job.name,
   handle: job.handle,
   options: job.options
 }));
@@ -13,19 +14,19 @@ export default {
   queues,
   add(name, data, options) {
     const queue = this.queues.find(queue => queue.name === name );
-    return queue.bull.add(data, options || queue.options);
+    return queue.bull.add(queue.jobName, data, options || queue.options);
   },
   process() {
     this.queues.forEach( queue => {
-      queue.bull.process(queue.handle);
+      const worker = new Worker(queue.bull.name, queue.handle, redisConfig);
       
-      queue.bull.on("completed", (job, result) => {
-        console.log("Job completed!", job.data.user.n);
+      worker.on("completed", (job, result) => {
+        console.log("Job completed!", job.data);
         console.log(job.data);
       });
 
-      queue.bull.on("failed", (job, err) => {
-        console.log("Job failed!", queue.key, queue.data);
+      worker.on("failed", (job, err) => {
+        console.log("Job failed!", job.queueName, job.data);
         console.log(err);
         this.repeatJob(job);
       });
