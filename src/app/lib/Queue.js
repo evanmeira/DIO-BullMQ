@@ -1,4 +1,4 @@
-import { Queue, Worker, QueueScheduler } from "bullmq";
+import { Queue, Worker } from "bullmq";
 import redisConfig from "../../config/redis";
 import * as jobs from "../jobs";
 
