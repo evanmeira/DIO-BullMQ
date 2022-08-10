@@ -1,5 +1,5 @@
 import Queue from "bull";
-import redisConfig from "../../config/redis"
+import redisConfig from "../../config/redis";
 import * as jobs from "../jobs";
 
 const queues = Object.values(jobs).map( job => ({
@@ -11,23 +11,29 @@ const queues = Object.values(jobs).map( job => ({
 
 export default {
   queues,
-  add(name, data) {
+  add(name, data, options) {
     const queue = this.queues.find(queue => queue.name === name );
-    return queue.bull.add(data, queue.options);
+    return queue.bull.add(data, options || queue.options);
   },
   process() {
     this.queues.forEach( queue => {
       queue.bull.process(queue.handle);
-
+      
       queue.bull.on("completed", (job, result) => {
-        console.log("Job completed!");
+        console.log("Job completed!", job.data.user.n);
         console.log(job.data);
-      })
+      });
 
       queue.bull.on("failed", (job, err) => {
         console.log("Job failed!", queue.key, queue.data);
         console.log(err);
+        this.repeatJob(job);
       });
     });
+  },
+  repeatJob(job) {
+    const opts = job.opts;
+    opts.priority = 1;
+    this.add(job.queue.name, job.data, opts);
   }
 }
